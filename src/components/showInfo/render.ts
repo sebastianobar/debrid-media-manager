@@ -14,13 +14,24 @@ export const renderTorrentInfo = (
 	if (isRd) {
 		const rdInfo = info;
 		const showCheckbox = !rdInfo.fake;
+		const originalFiles = [...rdInfo.files];
+		const linkByFileId = new Map<string, string>();
 		let linkIndex = 0;
+		for (const file of originalFiles) {
+			if (file.selected === 1) {
+				const link = rdInfo.links[linkIndex++];
+				if (link) {
+					linkByFileId.set(String(file.id), link);
+				}
+			}
+		}
+
 		rdInfo.files.sort((a: ApiTorrentFile, b: ApiTorrentFile) => a.path.localeCompare(b.path));
 		const filesList = rdInfo.files.map((file: ApiTorrentFile) => {
 			const actions = [];
 			if (file.selected === 1) {
-				const fileLink = rdInfo.links[linkIndex++];
-				if (info.status === 'downloaded' && !rdInfo.fake) {
+				const fileLink = linkByFileId.get(String(file.id));
+				if (info.status === 'downloaded' && !rdInfo.fake && fileLink) {
 					actions.push(
 						renderButton('download', {
 							link: 'https://real-debrid.com/downloader',
@@ -38,12 +49,14 @@ export const renderTorrentInfo = (
 							})
 						);
 					} else {
-						actions.push(
-							renderButton('watch', {
-								onClick: `window.open('/api/watch/${app}?token=${rdKey}&hash=${info.hash}&link=${fileLink}')`,
-								text: 'Watch',
-							})
-						);
+						if (fileLink) {
+							actions.push(
+								renderButton('watch', {
+									onClick: `window.open('/api/watch/${app}?token=${rdKey}&hash=${info.hash}&link=${fileLink}')`,
+									text: 'Watch',
+								})
+							);
+						}
 					}
 
 					const { isTvEpisode } = getEpisodeInfo(file.path, mediaType);
